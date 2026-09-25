@@ -11,13 +11,16 @@ package tensor
 import "gpu"
 import "gpu/dtype"
 
-/// DType is how a tensor's elements are stored.
+/// DType is how a tensor's elements are stored: plain, or one of ggml's
+/// block formats, laid out as ggml lays them.
 public enum DType {
     case F32
     case F16
     case BF16
     case Q4_0
     case Q8_0
+    case Q4_K
+    case Q6_K
 
     /// Name is ggml's name for it: "f32", "q4_0".
     public var Name: string {
@@ -27,6 +30,8 @@ public enum DType {
         case .BF16: return "bf16"
         case .Q4_0: return "q4_0"
         case .Q8_0: return "q8_0"
+        case .Q4_K: return "q4_K"
+        case .Q6_K: return "q6_K"
         }
     }
 
@@ -34,6 +39,7 @@ public enum DType {
     public var BlockSize: int {
         switch self {
         case .Q4_0, .Q8_0: return 32
+        case .Q4_K, .Q6_K: return 256
         default: return 1
         }
     }
@@ -45,6 +51,8 @@ public enum DType {
         case .F16, .BF16: return 2
         case .Q4_0: return dtype.Q4_0.Bytes()
         case .Q8_0: return dtype.Q8_0.Bytes()
+        case .Q4_K: return dtype.Q4_K.Bytes()
+        case .Q6_K: return dtype.Q6_K.Bytes()
         }
     }
 
