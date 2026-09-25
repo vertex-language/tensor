@@ -21,6 +21,8 @@ for d in [gpu.CPU(), gpu.Default()] {
     let z = try await tensor.Tensor.Zeros([6], on: d)
     try await tensor.Add(try t.Floats(), try t.Floats(), into: try z.Floats())
     check(try await z.Floats().Download() == [2, 4, 6, 8, 10, 12], "\(d.Name): Add")
+    let c = try await tensor.ConcatRows([t, t])
+    check(c.Shape == [4, 3] && (try await c.Floats().Download()) == [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6], "\(d.Name): ConcatRows")
     let q = try await tensor.Tensor.Zeros([18], on: d)
     check(tensor.DType.Q4_0.Bytes(64) == 36 && tensor.DType.Q8_0.Bytes(32) == 34, "\(d.Name): block sizes")
     do {

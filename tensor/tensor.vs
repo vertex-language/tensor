@@ -132,6 +132,33 @@ public final class Tensor {
     }
 }
 
+/// ConcatRows is one tensor of parts' rows, one part after another: the
+/// weights of several projections of the same input fused into one, so
+/// one product makes them all. The parts share their dtype, device and
+/// row length; for a block format rows are whole blocks, so their bytes
+/// just follow each other.
+public func ConcatRows(_ parts: [Tensor]) async throws -> Tensor {
+    guard let first = parts.first else {
+        throw ShapeError.mismatch("ConcatRows of nothing")
+    }
+    let cols = first.Shape[first.Shape.count - 1]
+    var rows = 0, bytes = 0
+    for p in parts {
+        if p.DType != first.DType || p.Shape.count != 2 || p.Shape[1] != cols || p.Device.Name != first.Device.Name {
+            throw ShapeError.mismatch("ConcatRows of \(p.Shape) \(p.DType.Name) after \(first.Shape) \(first.DType.Name)")
+        }
+        rows += p.Shape[0]
+        bytes += p.Storage.count
+    }
+    let out = try first.Device.CreateBuffer(of: uint8.self, count: bytes)
+    var at = 0
+    for p in parts {
+        try await out.Slice(from: at, count: p.Storage.count).Copy(from: p.Storage)
+        at += p.Storage.count
+    }
+    return try Tensor(shape: [rows, cols], dtype: first.DType, storage: out)
+}
+
 func _add(_ a: gpu.Span<float32>, _ b: gpu.Span<float32>, _ y: gpu.MutableSpan<float32>) kernel {
     let i = gpu.Index.x
     if i < y.count {
